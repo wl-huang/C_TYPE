@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FocusType: Hardcore Ranked</title>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-sub: #6b7280;
+            --highlight: #3b82f6;
+            --correct: #10b981;
+            --error: #ef4444;
+            
+            /* Rank Colors */
+            --bronze: #cd7f32;
+            --silver: #94a3b8;
+            --gold: #f59e0b;
+            --platinum: #06b6d4;
+            --diamond: #8b5cf6;
+            --king: #e11d48; 
+            --god: #111827;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .header-section { text-align: center; margin-bottom: 20px; width: 100%; max-width: 900px; }
+
+        .rank-badge-container {
+            background: var(--card-bg);
+            padding: 15px 30px;
+            border-radius: 50px;
+            display: inline-flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            margin-top: 10px;
+            border: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .rank-badge-container.is-king { border-color: var(--king); background: linear-gradient(to right, #fff0f2, #fff); }
+        .rank-badge-container.is-god { border-color: var(--god); background: linear-gradient(to right, #f3f4f6, #e5e7eb); color: var(--god); }
+
+        .rank-icon {
+            width: 45px; height: 45px;
+            border-radius: 50%;
+            background: #ccc;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 900; color: white; font-size: 1.2rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .rank-info { text-align: left; display: flex; flex-direction: column; }
+        .rank-title { font-weight: 800; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px; }
+        .rank-points { font-size: 0.9rem; color: var(--text-sub); }
+
+        .race-track {
+            background: var(--card-bg); padding: 20px; border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            width: 100%; max-width: 900px; margin-bottom: 20px;
+        }
+
+        .race-lane { display: flex; align-items: center; margin-bottom: 12px; }
+        .race-lane:last-child { margin-bottom: 0; }
+
+        .lane-label {
+            width: 100px; font-size: 0.9rem; font-weight: bold;
+            text-align: right; margin-right: 15px; color: var(--text-sub);
+        }
+        
+        .lane-bar-bg { flex-grow: 1; height: 10px; background-color: #e5e7eb; border-radius: 5px; overflow: hidden; }
+        .lane-progress { height: 100%; width: 0%; border-radius: 5px; transition: width 0.3s ease-out; }
+
+        .lane-user .lane-progress { background-color: var(--highlight); }
+        .lane-bot1 .lane-progress { background-color: #ef4444; } 
+        .lane-bot2 .lane-progress { background-color: #f59e0b; } 
+        .lane-bot3 .lane-progress { background-color: #8b5cf6; } 
+
+        .lane-user .lane-label { color: var(--highlight); font-weight: 900; font-size: 0.9rem;}
+
+        .typing-area {
+            background: var(--card-bg); padding: 30px; border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            text-align: center; position: relative;
+            width: 100%; max-width: 900px;
+        }
+
+        .live-stats { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 0.9rem; color: var(--text-sub); font-weight: bold; }
+
+        .word-box {
+            height: 130px; overflow: hidden; border: 2px solid #e5e7eb; border-radius: 8px; padding: 15px;
+            margin-bottom: 20px; display: flex; flex-wrap: wrap; align-content: flex-start;
+            line-height: 2.5rem; font-family: 'Courier New', Courier, monospace; font-size: 1.4rem;
+            background: #fafafa; cursor: text;
+        }
+
+        .word { margin-right: 12px; padding: 2px 5px; border-radius: 4px; color: #9ca3af; }
+        .word.active { background-color: #e0e7ff; color: var(--text-main); border-bottom: 2px solid var(--highlight); }
+        .word.correct { color: var(--correct); }
+        .word.incorrect { color: var(--error); text-decoration: line-through; }
+
+        input#type-input {
+            width: 100%; padding: 15px; font-size: 1.2rem; border: 2px solid #d1d5db; border-radius: 8px; outline: none;
+            font-family: 'Courier New', Courier, monospace; transition: border-color 0.2s;
+        }
+        input#type-input:focus { border-color: var(--highlight); }
+        input#type-input.input-error { background-color: #fef2f2; border-color: var(--error); }
+
+        .modal-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.98); border-radius: 12px;
+            display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 10;
+        }
+        .modal-overlay.visible { display: flex; }
+
+        .result-title { font-size: 2.2rem; font-weight: 800; margin-bottom: 5px; }
+        .result-sub { color: var(--text-sub); margin-bottom: 20px; }
+
+        .rp-change { font-size: 3rem; font-weight: 900; margin: 5px 0; text-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .rp-plus { color: var(--correct); }
+        .rp-minus { color: var(--error); }
+
+        .accuracy-note { font-size: 0.9rem; font-weight: bold; padding: 6px 15px; border-radius: 6px; margin-bottom: 20px; }
+        .acc-bonus { background: #d1fae5; color: #065f46; }
+        .acc-penalty { background: #fee2e2; color: #991b1b; }
+        .acc-fatal { background: #7f1d1d; color: #fecaca; border: 2px solid #991b1b; }
+
+        .stats-row { display: flex; gap: 20px; margin-bottom: 20px; }
+        .stat-mini { text-align: center; }
+        .stat-mini span { display: block; font-weight: bold; font-size: 1.2rem; }
+        .stat-mini label { font-size: 0.75rem; color: var(--text-sub); text-transform: uppercase; }
+
+        button.btn-primary {
+            background-color: var(--highlight); color: white; border: none; padding: 12px 30px; font-size: 1rem;
+            border-radius: 6px; cursor: pointer; font-weight: bold; transition: background 0.2s;
+        }
+        button.btn-primary:hover { background-color: #2563eb; }
+
+        .btn-reset { margin-top: 20px; font-size: 0.8rem; color: #999; background: none; border: none; cursor: pointer; text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+    <div class="header-section">
+        <h1>FocusType <span style="color:var(--highlight)">Ranked</span></h1>
+        <div class="rank-badge-container" id="rank-badge-container">
+            <div class="rank-icon" id="rank-icon">-</div>
+            <div class="rank-info">
+                <div class="rank-title" id="rank-name">Placement</div>
+                <div class="rank-points" id="rank-details">Play 1 game to calibrate</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="race-track">
+        <div class="race-lane lane-user">
+            <div class="lane-label">YOU</div>
+            <div class="lane-bar-bg"><div class="lane-progress" id="prog-user" style="width: 0%"></div></div>
+        </div>
+        <div class="race-lane lane-bot1">
+            <div class="lane-label" id="label-bot1">Ben</div>
+            <div class="lane-bar-bg"><div class="lane-progress" id="prog-bot1" style="width: 0%"></div></div>
+        </div>
+        <div class="race-lane lane-bot2">
+            <div class="lane-label" id="label-bot2">Quail</div>
+            <div class="lane-bar-bg"><div class="lane-progress" id="prog-bot2" style="width: 0%"></div></div>
+        </div>
+        <div class="race-lane lane-bot3">
+            <div class="lane-label" id="label-bot3">Teddy</div>
+            <div class="lane-bar-bg"><div class="lane-progress" id="prog-bot3" style="width: 0%"></div></div>
+        </div>
+    </div>
+
+    <div class="typing-area">
+        <div class="live-stats">
+            <span id="progress-text">0 / 20</span>
+            <span id="timer-text">00:00</span>
+        </div>
+
+        <div class="word-box" id="word-box" onclick="document.getElementById('type-input').focus()"></div>
+
+        <input type="text" id="type-input" placeholder="Type here..." autocomplete="off" spellcheck="false">
+
+        <div id="results-modal" class="modal-overlay">
+            <div class="result-title" id="res-title">Finished!</div>
+            <div class="result-sub" id="res-sub">Calculating...</div>
+            
+            <div class="rp-change" id="res-rp-change"></div>
+            <div id="res-acc-note" style="display:none;"></div>
+
+            <div class="stats-row">
+                <div class="stat-mini">
+                    <span id="res-wpm">0</span> <label>WPM</label>
+                </div>
+                <div class="stat-mini">
+                    <span id="res-acc">0%</span> <label>Accuracy</label>
+                </div>
+                <div class="stat-mini">
+                    <span id="res-rank">#</span> <label>Place</label>
+                </div>
+            </div>
+
+            <button class="btn-primary" onclick="initGame()">Next Match</button>
+        </div>
+    </div>
+
+    <button class="btn-reset" onclick="resetData()">[Reset Progress & Data]</button>
+
+    <script>
+        const SESSION_LENGTH = 20;
+        const wordPool = [
+              "天空", "海洋", "森林", "城市", "快樂", "悲傷", "憤怒", "興奮", "蘋果", "香蕉",
+          "西瓜", "葡萄", "學校", "老師", "學生", "考試", "書本", "鉛筆", "橡皮", "電腦", "鍵盤",
+          "滑鼠", "螢幕", "手機", "網路", "程式", "遊戲", "音樂", "電影", "運動", "籃球", "足球", 
+          "棒球", "游泳", "跑步", "旅行", "機場", "飛機", "火車", "捷運", "公車", "餐廳", "美食", 
+          "漢堡", "披薩", "牛排", "壽司", "咖啡", "奶茶", "果汁", "這是", "那是", "什麼", "為什麼", 
+          "因為", "所以", "但是", "雖然", "如果", "可是", "好的", "不好", "謝謝", "對不起", "沒關係", 
+          "再見", "早上", "中午", "晚上", "今天", "明天", "昨天", "星期", "月份", "年份", "春天",
+          "夏天", "秋天", "冬天", "太陽", "月亮", "星星", "雲朵", "下雨", "下雪", "颳風", "地震", 
+          "颱風", "彩虹", "花朵", "樹木", "草地", "河流", "湖泊", "高山", "海灘", "公園", "動物",
+          "狗狗", "貓咪", "兔子", "鳥兒", "魚兒", "獅子", "老虎", "大象", "猴子", "熊貓", "顏色",
+          "紅色", "橙色", "黃色", "綠色", "藍色", "紫色", "黑色", "白色", "灰色", "金色", "銀色",
+          "數字", "簡單", "困難", "挑戰", "練習", "時間", "分鐘", "小時", "秒鐘", "手錶", "鬧鐘",
+          "日曆", "鏡子", "桌子", "椅子", "沙發", "床鋪", "枕頭", "棉被", "衣櫃", "衣服", "褲子",
+          "鞋子", "襪子", "帽子", "眼鏡", "手套", "圍巾", "雨傘", "錢包", "鑰匙", "門窗", "牆壁", 
+          "地板", "天花板", "電燈", "冷氣", "風扇", "冰箱", "洗衣機", "電視", "音響", "耳機",
+          "充電器", "電池", "垃圾桶", "衛生紙", "毛巾", "牙刷", "牙膏", "沐浴乳", "洗髮精", "肥皂",
+          "梳子", "吹風機", "剪刀", "膠水", "膠帶", "直尺", "筆記本", "課本", "作業", "成績", "畢業",
+          "工作", "老闆", "同事", "開會", "報告", "文件", "薪水", "放假", "週末", "節日", "新年",
+          "聖誕節", "生日", "禮物", "蛋糕", "蠟燭", "氣球", "派對", "慶祝", "成功", "失敗", "努力", 
+          "堅持", "夢想", "希望", "未來", "過去", "現在", "回憶", "照片", "相機", "影片", "錄音",
+          "麥克風", "喇叭", "歌手", "演員", "導演", "作家", "畫家", "科學家", "醫生", "護士", "警察",
+          "消防員", "郵差", "司機", "廚師", "服務生", "店員", "顧客", "商店", "超市", "市場", "銀行",
+          "郵局", "醫院", "藥局", "圖書館", "博物館", "美術館", "電影院", "體育館", "游泳池", "遊樂園", "動物園", "植物園"
+        ];
+
+        const RANKS = [
+            { name: "Bronze", minRP: 0, color: "var(--bronze)" },
+            { name: "Silver", minRP: 200, color: "var(--silver)" },
+            { name: "Gold", minRP: 400, color: "var(--gold)" },
+            { name: "Platinum", minRP: 600, color: "var(--platinum)" },
+            { name: "Diamond", minRP: 800, color: "var(--diamond)" },
+            { name: "King", minRP: 1000, color: "var(--king)" },
+            { name: "God", minRP: 1500, color: "var(--god)" }
+        ];
+
+        let currentWords = [];
+        let currentIndex = 0;
+        let startTime = null;
+        let timerInterval = null;
+        let gameActive = false;
+        let totalKeystrokes = 0;
+        let totalMistakes = 0;
+        let correctCharCount = 0;
+        
+        let bots = [];
+        let botTimers = [];
+        let userRP = null; 
+
+        // --- Math Formulas ---
+        function getLadderWPM(rp) {
+            if (rp < 200) return 5 + (rp / 200) * 15;
+            if (rp < 400) return 20 + ((rp - 200) / 200) * 15;
+            if (rp < 600) return 35 + ((rp - 400) / 200) * 15;
+            if (rp < 800) return 50 + ((rp - 600) / 200) * 20;
+            if (rp < 1000) return 70 + ((rp - 800) / 200) * 20;
+            if (rp < 1500) return 90 + ((rp - 1000) / 500) * 20;
+            return 110 + ((rp - 1500) / 100) * 5;
+        }
+
+        function getRPFromWPM(wpm) {
+            if (wpm < 20) return ((wpm - 5) / 15) * 200;
+            if (wpm < 35) return 200 + ((wpm - 20) / 15) * 200;
+            if (wpm < 50) return 400 + ((wpm - 35) / 15) * 200;
+            if (wpm < 70) return 600 + ((wpm - 50) / 20) * 200;
+            if (wpm < 90) return 800 + ((wpm - 70) / 20) * 200;
+            if (wpm < 110) return 1000 + ((wpm - 90) / 20) * 500;
+            return 1500 + ((wpm - 110) / 5) * 100;
+        }
+
+        function loadUserData() {
+            const storedRP = localStorage.getItem('focusType_RP');
+            userRP = storedRP !== null ? parseInt(storedRP, 10) : null;
+            updateRankDisplay();
+        }
+
+        function getRankInfo(rp) {
+            if (rp === null) return { name: "Placement", color: "#999", next: 0 };
+            for (let i = RANKS.length - 1; i >= 0; i--) {
+                if (rp >= RANKS[i].minRP) {
+                    const nextRank = RANKS[i+1] ? RANKS[i+1].minRP : "MAX";
+                    return { ...RANKS[i], next: nextRank };
+                }
+            }
+            return RANKS[0];
+        }
+
+        function updateRankDisplay() {
+            const rank = getRankInfo(userRP);
+            const containerEl = document.getElementById('rank-badge-container');
+            const iconEl = document.getElementById('rank-icon');
+            const nameEl = document.getElementById('rank-name');
+            const detailEl = document.getElementById('rank-details');
+
+            containerEl.className = 'rank-badge-container'; // reset
+
+            if (userRP === null) {
+                iconEl.style.background = "#555";
+                iconEl.innerText = "?";
+                nameEl.innerText = "PLACEMENT MATCH";
+                nameEl.style.color = "#555";
+                detailEl.innerText = "Play 1 game to rank";
+            } else {
+                iconEl.style.background = rank.color;
+                iconEl.innerText = rank.name === "King" ? "K" : (rank.name === "God" ? "G" : rank.name[0]);
+                nameEl.innerText = rank.name;
+                nameEl.style.color = rank.color;
+                
+                if(rank.name === "King") containerEl.classList.add('is-king');
+                if(rank.name === "God") containerEl.classList.add('is-god');
+
+                if(rank.next === "MAX") detailEl.innerText = `${userRP} RP (MAX)`;
+                else detailEl.innerText = `${userRP} RP / ${rank.next} for Promo`;
+            }
+        }
+
+        function shuffle(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function initGame() {
+            loadUserData();
+            currentWords = shuffle(wordPool).slice(0, SESSION_LENGTH);
+            currentIndex = 0;
+            startTime = null;
+            totalKeystrokes = 0;
+            totalMistakes = 0;
+            correctCharCount = 0;
+            gameActive = false;
+            if(timerInterval) clearInterval(timerInterval);
+
+            document.getElementById('type-input').value = '';
+            document.getElementById('type-input').disabled = false;
+            document.getElementById('type-input').focus();
+            document.getElementById('type-input').classList.remove('input-error');
+            document.getElementById('results-modal').classList.remove('visible');
+            document.getElementById('res-acc-note').style.display = 'none';
+            document.getElementById('progress-text').innerText = `0 / ${SESSION_LENGTH}`;
+            document.getElementById('timer-text').innerText = "00:00";
+            
+            const wb = document.getElementById('word-box');
+            wb.innerHTML = '';
+            currentWords.forEach((w, i) => {
+                const s = document.createElement('span');
+                s.className = i === 0 ? 'word active' : 'word';
+                s.innerText = w;
+                wb.appendChild(s);
+            });
+            wb.scrollTop = 0;
+
+            setupBots();
+        }
+
+        function setupBots() {
+            botTimers.forEach(t => clearTimeout(t));
+            botTimers = [];
+            
+            ['user', 'bot1', 'bot2', 'bot3'].forEach(k => {
+                document.getElementById(`prog-${k}`).style.width = '0%';
+            });
+
+            let botSpeeds = [];
+            if (userRP === null) {
+                botSpeeds = [15, 30, 45]; 
+            } else {
+                const ladderWPM = getLadderWPM(userRP);
+                botSpeeds = [
+                    Math.floor(ladderWPM * 0.91), 
+                    Math.floor(ladderWPM * 0.98), 
+                    Math.floor(ladderWPM * 1.1)
+                ];
+            }
+
+            bots = botSpeeds.map((wpm, i) => ({
+                id: `bot${i+1}`,
+                element: document.getElementById(`prog-bot${i+1}`),
+                wpm: Math.max(5, wpm),
+                progress: 0,
+                finished: false
+            }));
+            
+            ["Ben", "Quail", "Teddy"].forEach((n, i) => {
+                document.getElementById(`label-bot${i+1}`).innerText = n;
+            });
+        }
+
+        function startBots() {
+            bots.forEach((bot, i) => scheduleBotWord(i));
+        }
+
+        function scheduleBotWord(botIndex) {
+            if (!gameActive) return;
+            const bot = bots[botIndex];
+            if (bot.progress >= SESSION_LENGTH) {
+                bot.finished = true;
+                return;
+            }
+
+            let baseDelay = 60000 / bot.wpm;
+            let variance = (Math.random() * 0.6) + 0.7; 
+            let actualDelay = baseDelay * variance;
+            if (Math.random() < 0.10) actualDelay += 1500;
+
+            const tid = setTimeout(() => {
+                if (!gameActive) return;
+                bot.progress++;
+                bot.element.style.width = `${(bot.progress / SESSION_LENGTH)*100}%`;
+                scheduleBotWord(botIndex);
+            }, actualDelay);
+            
+            botTimers.push(tid);
+        }
+
+        const inputEl = document.getElementById('type-input');
+        
+        inputEl.addEventListener('input', (e) => {
+            if (!startTime && e.target.value.length > 0) {
+                gameActive = true;
+                startTime = new Date();
+                timerInterval = setInterval(() => {
+                    const diff = Math.floor((new Date() - startTime) / 1000);
+                    const m = Math.floor(diff/60).toString().padStart(2,'0');
+                    const s = (diff%60).toString().padStart(2,'0');
+                    document.getElementById('timer-text').innerText = `${m}:${s}`;
+                }, 1000);
+                startBots();
+            }
+            const typed = e.target.value;
+            const target = currentWords[currentIndex];
+            totalKeystrokes++;
+
+            if (target.startsWith(typed.trim())) {
+                inputEl.classList.remove('input-error');
+            } else {
+                inputEl.classList.add('input-error');
+                totalMistakes++;
+            }
+        });
+
+        inputEl.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (!gameActive) return;
+                const val = inputEl.value.trim();
+                const target = currentWords[currentIndex];
+                const spans = document.querySelectorAll('.word');
+
+                if (val.length > 0) {
+                    if (val === target) {
+                        spans[currentIndex].classList.add('correct');
+                        correctCharCount += target.length; // Anti-cheat: add logic
+                    } else {
+                        spans[currentIndex].classList.add('incorrect');
+                        totalMistakes++; // Skip penalty: Wrong word submittal is a mistake
+                    }
+                    spans[currentIndex].classList.remove('active');
+
+                    currentIndex++;
+                    document.getElementById('prog-user').style.width = `${(currentIndex/SESSION_LENGTH)*100}%`;
+                    document.getElementById('progress-text').innerText = `${currentIndex} / ${SESSION_LENGTH}`;
+                    inputEl.value = '';
+                    inputEl.classList.remove('input-error');
+
+                    if (currentIndex >= SESSION_LENGTH) {
+                        finishGame();
+                    } else {
+                        spans[currentIndex].classList.add('active');
+                        spans[currentIndex].scrollIntoView({ behavior: "smooth", block: "center" });
+                    }
+                }
+            }
+        });
+
+        function finishGame() {
+            gameActive = false;
+            clearInterval(timerInterval);
+            botTimers.forEach(t => clearTimeout(t));
+            inputEl.disabled = true;
+
+            const endTime = new Date();
+            const minutes = (endTime - startTime) / 60000;
+            
+            // Anti-Cheat WPM: Based on CORRECT chars only, plus spaces
+            const wpm = Math.round(((correctCharCount + SESSION_LENGTH) / 5) / minutes);
+            const safeWPM = isFinite(wpm) ? wpm : 0;
+
+            const accuracy = totalKeystrokes > 0 ? Math.round(((totalKeystrokes - totalMistakes)/totalKeystrokes)*100) : 0;
+
+            let place = 1;
+            bots.forEach(b => { if (b.progress >= SESSION_LENGTH) place++; });
+            processResults(safeWPM, accuracy, place);
+        }
+
+        function processResults(wpm, accuracy, place) {
+            const titleEl = document.getElementById('res-title');
+            const subEl = document.getElementById('res-sub');
+            const rpChangeEl = document.getElementById('res-rp-change');
+            const accNoteEl = document.getElementById('res-acc-note');
+
+            document.getElementById('res-acc').innerText = accuracy + "%";
+            document.getElementById('res-rank').innerText = place;
+            document.getElementById('res-wpm').innerText = wpm;
+
+            accNoteEl.style.display = 'none';
+            accNoteEl.className = 'accuracy-note';
+
+            // === FATAL CHECK (Strict < 80%) ===
+            if (accuracy < 80) {
+                if (userRP !== null) {
+                    userRP = Math.max(0, userRP - 60);
+                    localStorage.setItem('focusType_RP', userRP);
+                }
+                titleEl.innerText = "DISQUALIFIED";
+                titleEl.style.color = "var(--error)";
+                subEl.innerText = "Accuracy < 80%. Score invalid.";
+                rpChangeEl.innerHTML = `<span class="rp-minus">-60 RP</span>`;
+                document.getElementById('res-wpm').innerText = "---";
+                
+                // Differentiate Fatal vs Warning text
+                if(accuracy < 60) accNoteEl.innerText = "SUPER OUT OF CONTROL (< 60%)";
+                else accNoteEl.innerText = "UNACCEPTABLE ACCURACY (< 80%)";
+                
+                accNoteEl.classList.add('acc-fatal');
+                accNoteEl.style.display = 'inline-block';
+                document.getElementById('results-modal').classList.add('visible');
+                updateRankDisplay();
+                return;
+            }
+
+            // === NORMAL FLOW ===
+            if (userRP === null) {
+                // Placement
+                const effectiveWPM = Math.floor(wpm * (accuracy / 100) * 0.8);
+                const calculatedRP = Math.floor(getRPFromWPM(effectiveWPM));
+                userRP = Math.max(0, calculatedRP);
+                localStorage.setItem('focusType_RP', userRP);
+
+                titleEl.innerText = "Placement Complete!";
+                titleEl.style.color = "var(--highlight)";
+                subEl.innerText = `Effective WPM: ${effectiveWPM} (Initial Calib)`;
+                rpChangeEl.innerHTML = `<span style="color:var(--highlight); font-size:1.5rem;">Rank: ${getRankInfo(userRP).name} (${userRP} RP)</span>`;
+            } else {
+                // Ranked Scoring
+                let change = 0;
+                if (place === 1) change = 30;
+                else if (place === 2) change = 10;
+                else if (place === 3) change = -5;
+                else change = -35;
+
+                // Accuracy Modifiers
+                let accMod = 0;
+                let accText = "";
+                if (accuracy >= 95) {
+                    accMod = 5;
+                    accText = "High Precision +5 RP";
+                    accNoteEl.classList.add('acc-bonus');
+                } else if (accuracy < 90) { 
+                    // Range 80% - 89%
+                    accMod = -10;
+                    accText = "Careless -10 RP";
+                    accNoteEl.classList.add('acc-penalty');
+                }
+
+                if(accText) {
+                    accNoteEl.innerText = accText;
+                    accNoteEl.style.display = 'inline-block';
+                }
+
+                let totalChange = change + accMod;
+                userRP += totalChange;
+                if (userRP < 0) userRP = 0; 
+                localStorage.setItem('focusType_RP', userRP);
+
+                titleEl.innerText = place <= 2 ? "Victory!" : "Defeat";
+                titleEl.style.color = place <= 2 ? "var(--correct)" : "var(--error)";
+                
+                const sign = totalChange >= 0 ? "+" : "";
+                const colorClass = totalChange >= 0 ? "rp-plus" : "rp-minus";
+                subEl.innerText = `(Place ${change > 0 ? '+'+change : change} | Acc ${accMod > 0 ? '+'+accMod : accMod})`;
+                rpChangeEl.innerHTML = `<span class="${colorClass}">${sign}${totalChange} RP</span>`;
+            }
+            document.getElementById('results-modal').classList.add('visible');
+            updateRankDisplay();
+        }
+
+        function resetData() {
+            if(confirm("Reset all rank data?")) {
+                localStorage.removeItem('focusType_RP');
+                location.reload();
+            }
+        }
+
+        window.onload = initGame;
+    </script>
+</body>
+</html>
