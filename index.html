@@ -290,12 +290,12 @@
 
         function getRPFromWPM(wpm) {
             if (wpm < 20) return ((wpm - 5) / 15) * 200;
-            if (wpm < 40) return 200 + ((wpm - 20) / 20) * 200;
-            if (wpm < 60) return 400 + ((wpm - 40) / 20) * 200;
-            if (wpm < 80) return 600 + ((wpm - 60) / 20) * 200;
-            if (wpm < 100) return 800 + ((wpm - 80) / 20) * 200;
-            if (wpm < 130) return 1000 + ((wpm - 100) / 30) * 500;
-            return 1500 + ((wpm - 130) / 5) * 100;
+            if (wpm < 45) return 200 + ((wpm - 20) / 25) * 200;
+            if (wpm < 70) return 400 + ((wpm - 45) / 25) * 200;
+            if (wpm < 95) return 600 + ((wpm - 70) / 25) * 200;
+            if (wpm < 110) return 800 + ((wpm - 95) / 25) * 200;
+            if (wpm < 140) return 1000 + ((wpm - 110) / 30) * 500;
+            return 1500 + ((wpm - 140) / 5) * 100;
         }
 
         function loadUserData() {
