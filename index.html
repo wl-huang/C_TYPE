@@ -317,9 +317,9 @@
             if (kpm < 100) return ((kpm - 40) / 60) * 200;
             if (kpm < 200) return 200 + ((kpm - 100) / 100) * 200;
             if (kpm < 300) return 400 + ((kpm - 200) / 100) * 200;
-            if (kpm < 500) return 600 + ((kpm - 300) / 200) * 200;
-            if (kpm < 700) return 800 + ((kpm - 500) / 200) * 200;
-            if (kpm < 900) return 1000 + ((kpm - 700) / 200) * 500;
+            if (kpm < 450) return 600 + ((kpm - 300) / 150) * 200;
+            if (kpm < 600) return 800 + ((kpm - 450) / 150) * 200;
+            if (kpm < 800) return 1000 + ((kpm - 600) / 200) * 500;
             return 1500 + ((kpm - 900) / 20) * 100;
         }
 
